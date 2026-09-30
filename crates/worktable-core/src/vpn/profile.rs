@@ -208,7 +208,7 @@ pub fn preflight(content: &str) -> AppResult<()> {
     let mut block: Option<String> = None;
     let mut has_remote = false;
     let mut has_ca = false;
-    for line in content.lines() {
+    for (index, line) in content.lines().enumerate() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
             continue;
@@ -234,7 +234,49 @@ pub fn preflight(content: &str) -> AppResult<()> {
         let mut tokens = line.split_whitespace();
         let directive = tokens.next().unwrap_or("");
         if !allowed.contains(&directive) {
-            return Err("配置包含不支持或有风险的 directive（外部文件、脚本、插件、日志或 management 设置等）。请由管理员提供 self-contained 配置；详情见 docs/VPN.md。".into());
+            let reason = match directive {
+                "ca" | "cert" | "key" | "tls-auth" | "tls-crypt" | "tls-crypt-v2" => {
+                    "引用了外部证书或密钥文件，请改为内联配置后导入。"
+                }
+                "auth-user-pass" => {
+                    "需要账号密码认证，当前连接器尚未支持凭据输入；请使用受支持的 VPN 客户端连接。"
+                }
+                "up" | "down" | "plugin" | "script-security" | "route-up" | "ipchange" => {
+                    "可执行脚本或插件，工作台不允许执行配置附带的程序。"
+                }
+                "log" | "log-append" | "status" => {
+                    "会写入外部文件，请移除此日志或状态输出选项后重试。"
+                }
+                _ => "此选项尚不受支持，请检查该行；不要发送证书、私钥或密码。",
+            };
+            // Never echo arguments, paths, or unknown tokens that could contain credentials.
+            let known = [
+                "ca",
+                "cert",
+                "key",
+                "tls-auth",
+                "tls-crypt",
+                "tls-crypt-v2",
+                "auth-user-pass",
+                "up",
+                "down",
+                "plugin",
+                "script-security",
+                "route-up",
+                "ipchange",
+                "log",
+                "log-append",
+                "status",
+                "management",
+                "config",
+                "daemon",
+            ];
+            let name = if known.contains(&directive) {
+                directive
+            } else {
+                "未知指令"
+            };
+            return Err(format!("第 {} 行（{}）：{}", index + 1, name, reason));
         }
         if directive == "dev" && !matches!(tokens.next(), Some("tun" | "tap")) {
             return Err("第一版仅支持 dev tun 或 dev tap。".into());
@@ -272,6 +314,16 @@ mod tests {
         ] {
             assert!(preflight(&format!("{CONFIG}{bad}\n")).is_err());
         }
+    }
+    #[test]
+    fn reports_line_without_disclosing_arguments() {
+        let error =
+            preflight(&format!("{CONFIG}auth-user-pass /private/secret.txt\n")).unwrap_err();
+        assert!(error.contains("第 7 行（auth-user-pass）"));
+        assert!(!error.contains("secret.txt"));
+        let error = preflight(&format!("{CONFIG}sensitive-token value\n")).unwrap_err();
+        assert!(error.contains("未知指令"));
+        assert!(!error.contains("sensitive-token"));
     }
     #[test]
     fn copies_private_and_rejects_traversal() {

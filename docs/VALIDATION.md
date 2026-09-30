@@ -2,8 +2,8 @@
 
 本机 macOS arm64。当前是浏览器 + 真实 Axum/SQLite，未重新打包 App。
 
-- `npm run check`：TypeScript、ESLint、17 个前端测试、Vite production build 通过。
-- `cargo test --workspace --offline`：12 个共享核心测试 + 4 个 HTTP API 测试通过。
+- `npm run check`：TypeScript、ESLint、19 个前端测试、Vite production build 通过。
+- `cargo test --workspace --offline`：13 个共享核心测试 + 4 个 HTTP API 测试通过。
 - `cargo clippy --workspace --all-targets --offline -- -D warnings`：通过。
 - 保留的桌面壳 `cargo check --manifest-path src-tauri/Cargo.toml --offline`：通过，仅编译兼容检查。
 - 浏览器真实操作：中文 Todo 新增、刷新后保留；中文日程新增并出现在首页。不是 mock 页面。
@@ -75,3 +75,5 @@ Rust 测试覆盖配置 schema/version/敏感字段拒绝、公共导出不含�
 运行 `node scripts/webview-fixture.mjs`，在桌面服务中添加 `http://127.0.0.1:17832`，requiresVpn 关闭。页面提供表单、持久化测试存储和无本地权限的 IPC 探测。此服务仅绑定本机且无真实数据。完成后停止脚本，按需删除自己创建的测试入口。
 
 本次手动验收创建了明确命名的 Todo、日程和 `WebView 验收` 服务记录。它们只在本机应用数据目录，不是工程预置数据。锁屏期间没有擅自清空用户数据目录。
+
+多配置界面：新增首页可见的单选配置列表、连接期间禁止切换及删除活动配置的测试。VPN 拒绝提示包含行号和分类原因，回归测试确认不回显参数或未知敏感内容。实际 hyksj.ovpn 待用户重试，未读取或上传该文件。
