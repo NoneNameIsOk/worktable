@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "labName": "HYKSJ 实验室（示例）",
+  "clusterHealthCheckUrl": "http://192.168.100.1:8080/",
+  "services": [
+    { "id": "14b367d6-6bb2-477f-ab91-2b6147e53aaa", "name": "gpustat", "url": "https://gpustat.example.org", "icon": "G", "requiresVpn": true, "favorite": true, "pinnedToSidebar": true, "sortOrder": 0, "enabled": true },
+    { "id": "aeece04e-03b3-42f9-8a2f-5a3d01e7a737", "name": "Nezha", "url": "https://nezha.example.org", "icon": "N", "requiresVpn": true, "favorite": true, "pinnedToSidebar": true, "sortOrder": 1, "enabled": true },
+    { "id": "92303fdc-5b01-4304-901d-b2cbb8a7fd99", "name": "ClearML", "url": "https://clearml.example.org", "icon": "C", "requiresVpn": true, "favorite": true, "pinnedToSidebar": true, "sortOrder": 2, "enabled": true },
+    { "id": "ca2d56e2-ec79-4413-8e75-4342b25b7bbc", "name": "New API", "url": "https://api.example.org", "icon": "A", "requiresVpn": true, "favorite": true, "pinnedToSidebar": true, "sortOrder": 3, "enabled": true }
+  ],
+  "nodes": [
+    { "id": "6af65806-ef81-4250-8e9c-bf9566a2a72e", "displayName": "vipsl10", "sshHost": "vipsl10", "enabled": true, "sortOrder": 0 }
+  ],
+  "defaultSettings": { "startInTray": false }
+}

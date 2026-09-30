@@ -1,0 +1,30 @@
+[package]
+name = "hyksj-worktable"
+version = "0.1.0"
+description = "科研课题组本地工作台"
+edition = "2021"
+rust-version = "1.98"
+
+[lib]
+name = "worktable_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+worktable-core = { path = "../crates/worktable-core" }
+tauri = { version = "2", features = ["tray-icon", "unstable"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-single-instance = "2"
+rfd = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+url = "2"
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+tempfile = "3"

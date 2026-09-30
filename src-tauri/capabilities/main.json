@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "仅本地 Worktable 主 WebView；远程服务不匹配此权限域。",
+  "webviews": ["main"],
+  "permissions": ["core:default"]
+}

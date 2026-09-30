@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.tools/
+src-tauri/target/
+*.ovpn
+*.key
+*.pem
+.env*
+!.env.example
+.DS_Store
+test-results/
+*.tsbuildinfo
+src-tauri/gen/
+target/
+.worktable-data/
