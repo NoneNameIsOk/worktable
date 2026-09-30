@@ -61,3 +61,7 @@ src-tauri/binaries/linux/x86_64/openvpn
 连同平台依赖库、签名 helper、驱动和许可证材料一起打包，不从不可信来源自动下载。发布 binary 必须确保 executable 权限、依赖装载路径和签名正确。
 
 OpenVPN 官方 COPYING 标明 GPL v2，并有 OpenSSL / Apache2 linking exceptions。将 CLI 作为独立进程随包发布仍需满足它及其依赖/驱动的分发义务：完整许可、copyright、对应源码或适当源码提供方式、修改记录。Worktable 没有复制 OpenVPN/GPL Dashboard 源码。不要因为进程独立就忽略 CLI 本身的 GPL 分发要求。参见 `THIRD_PARTY_NOTICES.md`。
+
+## 网页账号认证
+
+支持无参数 `auth-user-pass`，连接时输入账号密码，通过本机 OpenVPN management 通道提供，仅保留于当前连接进程内存，不写入数据库或凭据文件。支持 `<connection>` 内的受控连接选项。外部凭据文件、交互式私钥口令、动态验证码仍不支持。协议参考：https://openvpn.net/community-docs/management-interface.html 。

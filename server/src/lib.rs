@@ -47,7 +47,11 @@ impl WebState {
     pub fn shutdown(&self) {
         self.vpn.shutdown();
     }
-    fn connect(&self, id: &str) -> AppResult<()> {
+    fn connect(
+        &self,
+        id: &str,
+        credentials: Option<worktable_core::vpn::Credentials>,
+    ) -> AppResult<()> {
         if !self
             .db()?
             .snapshot()?
@@ -62,8 +66,14 @@ impl WebState {
         worktable_core::vpn::profile::preflight(&content)?;
         let password = uuid::Uuid::new_v4().to_string();
         let secret_file = self.profiles.password_file(&password)?;
-        self.vpn
-            .connect(&self.backend, id.into(), path, secret_file, password)?;
+        self.vpn.connect(
+            &self.backend,
+            id.into(),
+            path,
+            secret_file,
+            password,
+            credentials,
+        )?;
         self.db()?.set_last_profile(id)
     }
     async fn health(&self) -> AppResult<bool> {
@@ -168,9 +178,23 @@ async fn dispatch(state: &Arc<WebState>, command: &str, args: Value) -> AppResul
         }
         "vpn_status" => value(state.vpn.status()?),
         "vpn_capability" => value(state.backend.capability()),
-        "vpn_connect" => {
+        "vpn_auth_required" => {
             let p: ProfileId = parse(args)?;
-            state.connect(&p.profile_id)?;
+            let content = std::fs::read_to_string(state.profiles.path(&p.profile_id)?)
+                .map_err(|_| "无法读取 VPN 配置。")?;
+            Ok(json!(content
+                .lines()
+                .any(|line| line.trim() == "auth-user-pass")))
+        }
+        "vpn_connect" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase", deny_unknown_fields)]
+            struct Connect {
+                profile_id: String,
+                credentials: Option<worktable_core::vpn::Credentials>,
+            }
+            let p: Connect = parse(args)?;
+            state.connect(&p.profile_id, p.credentials)?;
             Ok(Value::Null)
         }
         "vpn_disconnect" => {

@@ -117,7 +117,7 @@ pub fn connect_profile(state: &AppState, id: &str) -> AppResult<()> {
     let pass = state.profiles.password_file(&secret)?;
     state
         .vpn
-        .connect(&state.backend, id.into(), path, pass, secret)?;
+        .connect(&state.backend, id.into(), path, pass, secret, None)?;
     state.db()?.set_last_profile(id)
 }
 #[tauri::command]

@@ -206,6 +206,7 @@ pub fn preflight(content: &str) -> AppResult<()> {
         "peer-fingerprint",
     ];
     let mut block: Option<String> = None;
+    let mut connection = false;
     let mut has_remote = false;
     let mut has_ca = false;
     for (index, line) in content.lines().enumerate() {
@@ -217,6 +218,17 @@ pub fn preflight(content: &str) -> AppResult<()> {
             if line == format!("</{b}>") {
                 block = None;
             }
+            continue;
+        }
+        if line == "<connection>" && !connection {
+            connection = true;
+            continue;
+        }
+        if line == "</connection>" && connection {
+            connection = false;
+            continue;
+        }
+        if line == "auth-user-pass" {
             continue;
         }
         if line.starts_with('<') && line.ends_with('>') {
@@ -285,7 +297,7 @@ pub fn preflight(content: &str) -> AppResult<()> {
             has_remote = true;
         }
     }
-    if block.is_some() || !has_remote || !has_ca {
+    if block.is_some() || connection || !has_remote || !has_ca {
         return Err(
             "配置不完整：需要 remote、内联 CA（或 peer-fingerprint），且所有内联区块必须闭合。"
                 .into(),
@@ -324,6 +336,25 @@ mod tests {
         let error = preflight(&format!("{CONFIG}sensitive-token value\n")).unwrap_err();
         assert!(error.contains("未知指令"));
         assert!(!error.contains("sensitive-token"));
+    }
+    #[test]
+    fn supports_auth_and_validates_connection_block() {
+        let config = "client\nauth-user-pass\n<connection>\nremote vpn.example.org 1194\nproto udp\n</connection>\n<ca>\nTEST\n</ca>\n";
+        assert!(preflight(config).is_ok());
+        assert!(preflight(&config.replace("proto udp", "up /tmp/script")).is_err());
+        assert!(preflight(&config.replace("</connection>", "")).is_err());
+    }
+    #[test]
+    #[ignore = "Explicit local file verification; never copies the source into the repository"]
+    fn imports_user_supplied_local_profile() {
+        let path = std::env::var_os("WORKTABLE_TEST_OVPN").expect("local path required");
+        let root = tempfile::tempdir().unwrap();
+        let manager = VpnProfileManager::new(root.path()).unwrap();
+        let profile = manager.import(Path::new(&path)).unwrap();
+        assert_eq!(
+            fs::read(manager.path(&profile.id).unwrap()).unwrap(),
+            fs::read(path).unwrap()
+        );
     }
     #[test]
     fn copies_private_and_rejects_traversal() {

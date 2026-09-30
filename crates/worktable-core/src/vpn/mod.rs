@@ -98,6 +98,32 @@ impl VpnBackend for BundledOpenVpnBackend {
         }
     }
 }
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Credentials {
+    pub username: String,
+    pub password: String,
+}
+impl Credentials {
+    pub fn validate(&self) -> AppResult<()> {
+        if [&self.username, &self.password]
+            .iter()
+            .any(|v| v.is_empty() || v.len() > 1024 || v.chars().any(char::is_control))
+        {
+            return Err("请输入有效的 VPN 用户名和密码（不能包含换行或控制字符）。".into());
+        }
+        Ok(())
+    }
+    fn commands(&self) -> AppResult<String> {
+        self.validate()?;
+        let quote = |s: &str| s.replace('\\', "\\\\").replace('"', "\\\"");
+        Ok(format!(
+            "username \"Auth\" \"{}\"\npassword \"Auth\" \"{}\"\n",
+            quote(&self.username),
+            quote(&self.password)
+        ))
+    }
+}
 pub struct VpnManager {
     status: Arc<Mutex<VpnStatus>>,
     stop: Arc<AtomicBool>,
@@ -126,8 +152,12 @@ impl VpnManager {
         profile: PathBuf,
         password_path: PathBuf,
         password: String,
+        credentials: Option<Credentials>,
     ) -> AppResult<()> {
         let result = (|| {
+            if let Some(c) = &credentials {
+                c.validate()?;
+            }
             let mut worker = self.worker.lock().map_err(|_| "VPN 后台任务繁忙。")?;
             if worker.as_ref().is_some_and(|w| !w.is_finished()) {
                 return Err("已有 VPN 任务运行中，请先断开。".into());
@@ -171,7 +201,7 @@ impl VpnManager {
             let stop = Arc::clone(&self.stop);
             let secret_path = password_path.clone();
             *worker = Some(thread::spawn(move || {
-                run_management(child, port, &password, &state, &stop);
+                run_management(child, port, &password, credentials, &state, &stop);
                 let _ = std::fs::remove_file(secret_path);
             }));
             Ok(())
@@ -233,6 +263,7 @@ fn run_management(
     mut child: Child,
     port: u16,
     password: &str,
+    credentials: Option<Credentials>,
     state: &Mutex<VpnStatus>,
     stop: &AtomicBool,
 ) {
@@ -319,8 +350,25 @@ fn run_management(
                 return;
             }
             Ok(_) => {
+                if line.starts_with(">PASSWORD:Need 'Auth' username/password") {
+                    let command = credentials
+                        .as_ref()
+                        .ok_or_else(|| "请输入 VPN 用户名和密码。".to_string())
+                        .and_then(Credentials::commands);
+                    match command {
+                        Ok(command) if stream.write_all(command.as_bytes()).is_ok() => continue,
+                        _ => {
+                            fail(&mut child, state, "无法提供 VPN 账号密码，请重新连接。");
+                            return;
+                        }
+                    }
+                }
                 if line.starts_with(">PASSWORD:") || line.contains("Verification Failed") {
-                    fail(&mut child,state,"此配置需要额外认证或私钥口令。第一版仅支持无需交互口令的实验室单文件配置。");
+                    fail(
+                        &mut child,
+                        state,
+                        "VPN 认证失败，或要求尚未支持的私钥口令/动态验证码。请检查认证方式。",
+                    );
                     return;
                 }
                 if line.starts_with(">FATAL:") || line.starts_with("ERROR:") {
@@ -369,6 +417,22 @@ fn run_management(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn auth_commands_escape_quotes_and_reject_injection() {
+        let credentials = Credentials {
+            username: "user".into(),
+            password: "p\"ass\\word".into(),
+        };
+        let command = credentials.commands().unwrap();
+        assert_eq!(command.lines().count(), 2);
+        assert!(command.contains("p\\\"ass\\\\word"));
+        assert!(Credentials {
+            username: "user\nsignal SIGTERM".into(),
+            password: "pass".into()
+        }
+        .commands()
+        .is_err());
+    }
     #[test]
     fn state_comes_from_management() {
         assert_eq!(
