@@ -2,7 +2,7 @@
 
 本机 macOS arm64。当前是浏览器 + 真实 Axum/SQLite，未重新打包 App。
 
-- `npm run check`：TypeScript、ESLint、15 个前端测试、Vite production build 通过。
+- `npm run check`：TypeScript、ESLint、17 个前端测试、Vite production build 通过。
 - `cargo test --workspace --offline`：12 个共享核心测试 + 4 个 HTTP API 测试通过。
 - `cargo clippy --workspace --all-targets --offline -- -D warnings`：通过。
 - 保留的桌面壳 `cargo check --manifest-path src-tauri/Cargo.toml --offline`：通过，仅编译兼容检查。
@@ -10,6 +10,8 @@
 - HTTP 测试：数据库重新打开后记录保留；跨站、伪造 Host、缺失请求头拒绝；VPN 文件内容导入及脚本拒绝；公共配置往返和版本拒绝；桌面启动设置拒绝。
 - 提醒事务通过两个数据库连接验证只领取一次。浏览器日期控件自动化未成功保留提醒时间，尚未确认实际页面提醒和系统通知弹出。
 - 真实 VPN/TUN/路由、实验室服务登录、VS Code Remote SSH、Windows/Linux 运行尚未验收。CI 已改为网页检查；本地结果不代表远端 CI 通过。
+
+上传入口追加验证：文件选择和拖拽上传的组件测试通过，包含多文件部分失败时逐项反馈；实际浏览器确认上传弹窗及原生文件选择控件可见。未使用真实 VPN 私钥进行验收。
 
 本次浏览器测试数据仅存本机网页数据目录，名称含“网页版验收”，未提交 Git。
 

@@ -32,6 +32,11 @@ async function readFile(accept: string): Promise<{ name: string; content: string
   if (file.size > 2 * 1024 * 1024) throw new Error('文件不能超过 2 MB。');
   return { name: file.name, content: await file.text() };
 }
+async function uploadVpn(file: File): Promise<boolean> {
+  if (!file.name.toLowerCase().endsWith('.ovpn')) throw new Error('请选择 .ovpn 配置文件。');
+  if (file.size > 2 * 1024 * 1024) throw new Error('文件不能超过 2 MB。');
+  return call<boolean>('import_vpn_profile', { name: file.name, content: await file.text() });
+}
 async function importVpn() {
   if (desktop) return call<boolean>('import_vpn_profile');
   const upload = await readFile('.ovpn');
@@ -70,7 +75,7 @@ export const api = {
   vpnCapability: () => call<Capability>('vpn_capability'),
   connect: (profileId: string) => call<void>('vpn_connect', { profileId }),
   disconnect: () => call<void>('vpn_disconnect'),
-  importVpn,
+  importVpn, uploadVpn,
   deleteVpn: (profileId: string) => call<void>('delete_vpn_profile', { profileId }),
   importLab, exportLab,
   serviceUrl: (serviceId: string) => call<string>('service_url', { serviceId }),
